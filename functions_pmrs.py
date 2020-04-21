@@ -41,7 +41,7 @@ import nsidc
 
 
 
-def loadCM(points_xy,ds, rollingvalue):
+def loadCM(points_xy, ds, rollingvalue):
     
     df = pd.DataFrame()
     
@@ -105,7 +105,7 @@ def NQT(df,plot, shift, location, rollingvalue):
         fig, ax = plt.subplots(figsize=(15,5))
         sns.set()
         
-        ax.plot(df_nqt ,marker='.', markersize=1.2,label= (f'CM ratio at POIs - rolling median of {rollingvalue}'))
+        ax.plot(df_nqt ,marker='.', markersize=1.2,label= (f'CM ratio at POI - rolling median of {rollingvalue}'))
         ax.set(xlabel='Years of ASMR-E dataset', ylabel='CM Ratio (-)',
            title=f' CM Ratio at the selected locations for Senanga given LT = {shift}')
         ax.legend()
@@ -163,7 +163,7 @@ def calculateQR(df,selection,plot,shift,location):
     mask = mask(p, a, b, a_, b_)
     
     if plot ==1:
-        print(res.summary())
+#         print(res.summary())
         
         figure, axes = plt.subplots(figsize=(10,10))
         axes.scatter(x[mask], df['POI4'][mask], facecolor='r', edgecolor='none', alpha=0.3, label='data point outside outer quantiles')
@@ -228,7 +228,86 @@ def probability(df, fits, plot, shift,location):
     
     
     
+
+
+def calc_performance_scores_new(df_nqt, obs, pred, threshold , dt, percentile):
+    np.seterr(divide='ignore', invalid='ignore')
+
+#     df_nqt = NQT(df,plot, shift, location, rollingvalue) # loading the NQT dataset int the loop, not sure if this is needed
+    df_nqt = np.where((df_nqt.index.month == 2) & (df_nqt.index.day == 1))[0] # select only the moment in time the rainseason starts to find the first moment above the trheshold
+    performance = np.zeros((len(df_nqt),5)) # create performance matrix 1 = date obs_threshold 2 obs_threshold 3. date pred_thres 4 pred_thres
+   
+    for t in range (30):
+
+        obs_threshold = np.where((obs[df_nqt[t]: df_nqt[t]+365]) > threshold)[0] 
+#         pred[percentile][obs_threshold] 
+
+        if len(obs_threshold) > 0:   #alles wat groter dan nul is -> hit of een miss
+                obs_threshold = obs_threshold[0] + df_nqt[t]
+                pred_threshold = np.where(pred[percentile][obs_threshold-dt:obs_threshold+dt] > threshold)[0] + (obs_threshold-dt)
+                if len(pred_threshold) > 0: #hit
+                    performance [t][0] = obs_threshold  
+                    performance [t][1] = 1
+                    performance [t][2] = min(pred_threshold)       
+                    performance [t][3] = 1          
+                else:       # miss!            
+                    performance [t][0] = obs_threshold 
+                    performance [t][1] = 1           
+                    performance [t][2] = len(pred_threshold)
+                    performance [t][3] = 0
+                               
     
+
+        pred_threshold2 = np.where((pred[percentile][df_nqt[t]: df_nqt[t]+365]) > threshold)[0]
+        if len(pred_threshold2)> 0: #alles wat groter dan nul is -> FA of CN
+                pred_threshold2 = pred_threshold2[0]  + df_nqt[t]
+                obs_threshold2 = np.where(obs[pred_threshold2-dt:pred_threshold2+dt] > threshold)[0]
+#                 print(pred_threshold2)
+#                 print(obs_threshold2)
+                if len(obs_threshold2) == 0: #alles wat groter dan nul is -> FA of CN
+                    
+                    performance [t][0] = len(obs_threshold2) 
+                    performance [t][1] = 0
+                    performance [t][2] = pred_threshold2
+                    performance [t][3] = 1    
+       
+    
+        if obs_threshold == 0:
+            if pred_threshold == 0:
+#         if (np.max(obs[df_nqt[t]: df_nqt[t]+365])<threshold): 
+#             if (np.max(pred[df_nqt[t]: df_nqt[t]+365])<threshold):                  
+                    performance [t][0] = -999
+                    performance [t][1] = 0           
+                    performance [t][2] = -999
+                    performance [t][3] = 0            
+    performance =pd.DataFrame(performance)
+    
+    performance.columns = ['day obs', 'obs', 'day pred', 'pred','class']
+    
+    hits = len(np.where((performance.obs==1) & (performance.pred ==1))[0])
+    false_al = len(np.where((performance.obs==0) & (performance.pred ==1))[0])
+    misses = len(np.where((performance.obs==1) & (performance.pred ==0))[0])
+    corr_neg = len(np.where((performance.obs==0) & (performance.pred ==0))[0])
+
+
+    try:
+        output = np.zeros((4,))
+        output[0] = hits / (hits + misses) #Probability of Detection
+        output[1] = false_al / (hits + false_al) #False Alarm Rate
+        output[2] = false_al / (false_al + corr_neg) #Probability of fase detection
+        output[3] = hits / (hits + false_al + misses) #Critical succes index
+    except ZeroDivisionError:
+        return -99
+    
+    metric = np.zeros((4,))
+    metric[0] = hits
+    metric[1] = false_al
+    metric[2] = misses
+    metric[3] = corr_neg
+    
+    return (performance,output,metric)
+      
+        
     
     
     

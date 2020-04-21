@@ -56,18 +56,24 @@ def make_measures_url(date, res, freq, HV, AD):
     url_base = 'https://n5eil01u.ecs.nsidc.org/MEASURES/NSIDC-0630.001'
     url_folder = '{:s}'
     url_template = os.path.join(url_base, url_folder,
-                                'NSIDC-0630-EASE2_T{:s}km-AQUA_AMSRE-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc') 
+                                'NSIDC-0630-EASE2_T{:s}km-F15_SSMI-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc')
+    # 'NSIDC-0630-EASE2_T{:s}km-AQUA_AMSRE-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc')  put the corresponding string tot the url template
+    # 'NSIDC-0630-EASE2_T{:s}km-F08_SSMI-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc')
+    # 'NSIDC-0630-EASE2_T{:s}km-F10_SSMI-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc') 
+    # 'NSIDC-0630-EASE2_T{:s}km-F13_SSMI-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc') 
+    # 'NSIDC-0630-EASE2_T{:s}km-F15_SSMI-{:s}-{:s}{:s}-{:s}-{:s}-v1.3.nc') 
 
     datestr1 = date.strftime('%Y%j')
     datestr2 = date.strftime('%Y.%m.%d')
 #     if str(res) == '3.125':
 #         suffix = 'SIR-RSS'
     if str(res) == '25':
-        suffix = 'GRD-RSS'
+        suffix = 'GRD-CSU'
     #else:
         #suffix = 'SIR-CSU'
    # else:
     #    suffix = 'SIR-RSS'
+#         suffix = 'GRD-RSS' (ASMR-E Suffix)
     
     return url_template.format(datestr2, str(res), datestr1, freq, HV, AD, suffix)
 
